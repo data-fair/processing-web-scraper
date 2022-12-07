@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /
+
+User-agent: data-fair-web-scraper-test
+Disallow: /site1/robots-disallow*
+Allow: /site1/

@@ -1,5 +1,6 @@
 const FormData = require('form-data')
 const crypto = require('crypto')
+const robotsParser = require('robots-parser')
 
 // TODO:
 // handle html but also any file formats
@@ -58,11 +59,13 @@ const normalizeURL = (url) => {
 }
 
 class PagesIterator {
-  constructor (log, processingConfig) {
+  constructor (log, pluginConfig, processingConfig, robots) {
     this.pages = []
     this.cursor = -1
     this.log = log
+    this.pluginConfig = pluginConfig
     this.processingConfig = processingConfig
+    this.robots = robots
   }
 
   [Symbol.asyncIterator] () {
@@ -72,6 +75,11 @@ class PagesIterator {
   push (page) {
     // TODO: apply no-follow rules
     if (typeof page === 'string') page = { url: page }
+    if (!this.processingConfig.baseURLs.find(b => page.url.startsWith(b))) return
+    page.origin = new URL(page.url).origin
+    if (this.robots[page.origin] && !this.robots[page.origin].isAllowed(page.url, this.pluginConfig.robotId || 'data-fair-web-scraper')) {
+      return
+    }
     page.normalizedURL = normalizeURL(page.url)
     if (this.pages.find(p => p.normalizedURL === page.normalizedURL)) return
     page._id = crypto.createHash('sha256').update(page.normalizedURL).digest('base64url').slice(0, 20)
@@ -118,7 +126,20 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     await log.info(`the dataset exists, id="${dataset.id}", title="${dataset.title}"`)
   }
 
-  const pages = new PagesIterator(log, processingConfig)
+  // parse the robots.txt files if available
+  const robots = {}
+  for (const baseURL of processingConfig.baseURLs) {
+    const { origin } = new URL(baseURL)
+    if (robots[origin]) continue
+    try {
+      const response = await axios.get(origin + '/robots.txt')
+      robots[origin] = robotsParser(origin + '/robots.txt', response.data)
+    } catch (err) {
+      await log.info(`failed to fetch ${origin + '/robots.txt'} - ${err.status || err.message}`)
+    }
+  }
+
+  const pages = new PagesIterator(log, pluginConfig, processingConfig, robots)
 
   await log.step('Init pages list')
   await log.info(`add ${processingConfig.startURLs.length} pages from config`)
@@ -128,7 +149,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     await log.info(`add ${existingPages.length} pages from previous crawls`)
     for (const page of existingPages) await pages.push({ page, source: 'previous exploration' })
   }
-  // TODO: init from sitemap
+  // TODO: init from sitemap (and use robots.getSitemaps() to help in this)
 
   const sendPage = async (page, data, contentType = 'text/html', filename = 'content.html') => {
     await log.debug('post page', page)
@@ -157,8 +178,11 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
   }
 
   for await (const page of pages) {
-    const pageIntervalPromise = new Promise(resolve => setTimeout(resolve, pluginConfig.pageIntervalMS || 1000))
     if (stopped) break
+
+    const crawlDelay = (robots[page.origin] && robots[page.origin].getCrawlDelay()) || pluginConfig.defaultCrawlDelay || 1
+    await new Promise(resolve => setTimeout(resolve, crawlDelay * 1000))
+
     // TODO: apply if-none-match and if-modified-since headers if etag or lastModified are available
     let response
     try {
@@ -166,7 +190,6 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     } catch (err) {
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
       if (page.source) await log.warning(`this broken URL comes from ${page.source}`)
-      await pageIntervalPromise
       continue
     }
 
@@ -210,7 +233,6 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
         await sendPage(page, $.html())
       }
     }
-    await pageIntervalPromise
   }
 }
 

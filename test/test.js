@@ -46,7 +46,8 @@ describe('Web scraper processing', () => {
       processingConfig: {
         datasetMode: 'create',
         dataset: { title: 'Web scraper test' },
-        startURLs: ['http://localhost:3343/site1/']
+        startURLs: ['http://localhost:3343/site1/'],
+        baseURLs: ['http://localhost:3343/site1/']
       }
     }, config, true, false)
 
@@ -59,6 +60,7 @@ describe('Web scraper processing', () => {
     const pages = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
       params: { sort: '_updatedAt', select: '_file.content_type,_file.content,title,url' }
     })).data.results
+    // console.log(pages)
 
     const page2 = pages.find(p => p.url === 'http://localhost:3343/site1/page2/')
     assert.ok(page2)
@@ -69,6 +71,8 @@ describe('Web scraper processing', () => {
     assert.ok(!pages.find(p => p.url === 'http://localhost:3343/site1/meta-noindex.html'), 'meta noindex page')
     assert.ok(pages.find(p => p.url === 'http://localhost:3343/site1/meta-nofollow.html'), 'meta nofollow page')
     assert.ok(!pages.find(p => p.url === 'http://localhost:3343/site1/meta-nofollow-link.html'), 'meta nofollow link page')
+
+    assert.ok(!pages.find(p => p.url === 'http://localhost:3343/site1/robots-disallow.html'), 'robots disallow page')
 
     // another execution should use the previous exploration result
     // await webScraper.run(context)
