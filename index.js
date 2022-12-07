@@ -50,6 +50,13 @@ const datasetSchema = [
 // a global variable to manage interruption
 let stopped
 
+const normalizeURL = (url) => {
+  for (const indexSuffix of ['index.html', 'index.php', 'index.jsp', 'index.cgi']) {
+    if (url.endsWith('/' + indexSuffix)) return url.slice(0, url.length - indexSuffix.length)
+  }
+  return url
+}
+
 class PagesIterator {
   constructor (log) {
     this.pages = []
@@ -64,8 +71,9 @@ class PagesIterator {
   push (page) {
     // TODO: apply no-follow rules
     if (typeof page === 'string') page = { url: page }
-    if (this.pages.find(p => p.url === page.url)) return
-    page._id = crypto.createHash('sha256').update(page.url).digest('base64url').slice(0, 20)
+    page.normalizedURL = normalizeURL(page.url)
+    if (this.pages.find(p => p.normalizedURL === page.normalizedURL)) return
+    page._id = crypto.createHash('sha256').update(page.normalizedURL).digest('base64url').slice(0, 20)
     this.pages.push(page)
   }
 

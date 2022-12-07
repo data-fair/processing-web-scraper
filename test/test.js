@@ -55,8 +55,15 @@ describe('Web scraper processing', () => {
     const dataset = context.processingConfig.dataset
     assert.equal(dataset.title, 'Web scraper test')
     await context.ws.waitForJournal(dataset.id, 'finalize-end')
-    const lines = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`)).data
-    console.log('lines', lines)
+    const pages = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
+      params: { sort: '_updatedAt', select: '_file.content_type,_file.content,title,url' }
+    })).data.results
+    // console.log('pages', pages)
+    const page2 = pages.find(p => p.url === 'http://localhost:3343/site1/page2/')
+    assert.ok(page2)
+    assert.ok(page2['_file.content'].includes('Page 2 content'))
+    assert.equal(page2.title, 'Page 2 title')
+    assert.ok(!pages.find(p => p.url === 'http://localhost:3343/site1/page2/index.html'), 'duplicate page')
 
     // another execution should use the previous exploration result
     // await webScraper.run(context)
