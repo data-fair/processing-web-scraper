@@ -52,10 +52,17 @@ const datasetSchema = [
 let stopped
 
 const normalizeURL = (url) => {
+  const parsedURL = new URL(url)
   for (const indexSuffix of ['index.html', 'index.php', 'index.jsp', 'index.cgi']) {
-    if (url.endsWith('/' + indexSuffix)) return url.slice(0, url.length - indexSuffix.length)
+    if (parsedURL.pathname.endsWith('/' + indexSuffix)) {
+      parsedURL.pathname = parsedURL.pathname.slice(0, parsedURL.pathname.length - indexSuffix.length)
+    }
   }
-  return url
+  return parsedURL.href
+}
+
+const getId = (page) => {
+  return crypto.createHash('sha256').update(normalizeURL(page.url)).digest('base64url').slice(0, 20)
 }
 
 class PagesIterator {
@@ -76,22 +83,12 @@ class PagesIterator {
     // TODO: apply no-follow rules
     if (typeof page === 'string') page = { url: page }
     if (!this.processingConfig.baseURLs.find(b => page.url.startsWith(b))) return
-    page.origin = new URL(page.url).origin
-    if (this.robots[page.origin] && !this.robots[page.origin].isAllowed(page.url, this.pluginConfig.userAgent || 'data-fair-web-scraper')) {
+    page.parsedURL = page.parsedURL || new URL(page.url)
+    if (this.robots[page.parsedURL.origin] && !this.robots[page.parsedURL.origin].isAllowed(page.url, this.pluginConfig.userAgent || 'data-fair-web-scraper')) {
       return
     }
-    page.normalizedURL = normalizeURL(page.url)
-    if (this.pages.find(p => p.normalizedURL === page.normalizedURL)) return
-    page._id = crypto.createHash('sha256').update(page.normalizedURL).digest('base64url').slice(0, 20)
-
-    // improve page title
-    if (page.title) {
-      page.title = page.title.trim()
-      if (this.processingConfig.titlePrefix && page.title.startsWith(this.processingConfig.titlePrefix)) {
-        page.title = page.title.replace(this.processingConfig.titlePrefix, '')
-      }
-    }
-
+    page._id = getId(page)
+    if (this.pages.find(p => p._id === page._id)) return
     this.pages.push(page)
   }
 
@@ -100,7 +97,7 @@ class PagesIterator {
     if (this.cursor === 0) await this.log.task('Crawl pages')
     await this.log.progress('Crawl pages', this.cursor, this.pages.length)
     const page = this.pages[this.cursor]
-    await this.log.debug('next page', page)
+    if (page) await this.log.debug('next page', page.url)
     return { value: page, done: this.cursor === this.pages.length }
   }
 }
@@ -152,9 +149,16 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
   // TODO: init from sitemap (and use robots.getSitemaps() to help in this)
 
   const sendPage = async (page, data, contentType = 'text/html', filename = 'content.html') => {
-    await log.debug('post page', page)
+    await log.debug('send page', page.url)
     // TODO: apply no-index rules
     const form = new FormData()
+    // improve page title
+    if (page.title) {
+      page.title = page.title.trim()
+      if (processingConfig.titlePrefix && page.title.startsWith(processingConfig.titlePrefix)) {
+        page.title = page.title.replace(processingConfig.titlePrefix, '')
+      }
+    }
     form.append('title', page.title)
     form.append('url', page.url)
     if (page.tags && page.tags.length) form.append('tags', page.tags.join(','))
@@ -165,6 +169,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
       knownLength: data.length
     }
     form.append('attachment', data, dataOpts)
+    page._id = getId(page)
     const headers = {
       ...form.getHeaders(),
       'content-length': form.getLengthSync()
@@ -180,13 +185,13 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
   for await (const page of pages) {
     if (stopped) break
 
-    const crawlDelay = (robots[page.origin] && robots[page.origin].getCrawlDelay()) || pluginConfig.defaultCrawlDelay || 1
+    const crawlDelay = (robots[page.parsedURL.origin] && robots[page.parsedURL.origin].getCrawlDelay()) || pluginConfig.defaultCrawlDelay || 1
     await new Promise(resolve => setTimeout(resolve, crawlDelay * 1000))
 
     // TODO: apply if-none-match and if-modified-since headers if etag or lastModified are available
     let response
     try {
-      response = await axios.get(page.url, { headers: { 'user-agent': this.pluginConfig.userAgent || 'data-fair-web-scraper' } })
+      response = await axios.get(page.url, { headers: { 'user-agent': pluginConfig.userAgent || 'data-fair-web-scraper' } })
     } catch (err) {
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
       if (page.source) await log.warning(`this broken URL comes from ${page.source}`)
@@ -218,6 +223,37 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
           }
         }
       })
+
+      if (!page.noindex && processingConfig.anchors && processingConfig.anchors.length) {
+        const anchorsPages = []
+        $('a').each(function (i, elem) {
+          const href = $(this).attr('href')
+          if (!href) return
+          const parsedURL = new URL(href, page.url)
+          if (parsedURL.hash) {
+            const targetElement = $(parsedURL.hash)
+            if (!targetElement) return
+            for (const anchor of processingConfig.anchors || []) {
+              const fragment = anchor.wrapperSelector ? targetElement.closest(anchor.wrapperSelector) : targetElement
+              const fragmentHtml = fragment.html()
+              if (fragmentHtml) {
+                const anchorPage = { url: parsedURL.href }
+                if (anchor.titleSelector) anchorPage.title = fragment.find(anchor.titleSelector).text() || page.title
+                else anchorPage.title = targetElement.text() || page.title
+                anchorPage.tags = anchor.tags || []
+                anchorsPages.push([anchorPage, fragmentHtml])
+                $(fragment).remove()
+              }
+            }
+          }
+        })
+        for (const [anchorPage, fragmentHtml] of anchorsPages) {
+          console.log(anchorPage)
+          await sendPage(anchorPage, `<body>
+  ${fragmentHtml}
+</body>`)
+        }
+      }
 
       if (!page.nofollow) {
         $('a').each(function (i, elem) {

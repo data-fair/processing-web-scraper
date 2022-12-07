@@ -81,9 +81,21 @@
         "items": {
           "type": "object",
           "properties": {
-            "tag": {"type": "string", "title": "Étiquette à associer à ce type de fragment"},
-            "wrapperSelector": {"type": "string", "title": "Sélecteur CSS de l'élément englobant", "description": "Le sélecteur CSS sera appliqué aux éléments parents de la cible du lien, l'élément le plus proche sera retourné et son contenu HTML sera le contenu du fragment. Optionel, si absent l'élément englobant sera directement l'élément cible du lien."},
-            "titleSelector": {"type": "string", "title": "Sélecteur CSS du titre", "description": "Le sélecteur CSS sera appliqué à l'intérieur de l'élément englobant pour extraire le titre du fragment. Optionel, si absent le titre sera directement extrait de l'élément cible du lien."}
+            "tags": {
+              "type": "array",
+              "title": "Étiquettes à associer à ce type de fragment",
+              "items": {"type": "string"}
+            },
+            "wrapperSelector": {
+              "type": "string",
+              "title": "Sélecteur CSS de l'élément englobant",
+              "description": "Le sélecteur CSS sera appliqué aux éléments parents de la cible du lien, l'élément le plus proche sera retourné et son contenu HTML sera le contenu du fragment. Optionel, si absent l'élément englobant sera directement l'élément cible du lien."
+            },
+            "titleSelector": {
+              "type": "string",
+              "title": "Sélecteur CSS du titre",
+              "description": "Le sélecteur CSS sera appliqué à l'intérieur de l'élément englobant pour extraire le titre du fragment. Optionel, si absent le titre sera directement extrait de l'élément cible du lien."
+            }
           }
         }
       },
