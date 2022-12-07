@@ -5,7 +5,7 @@ const crypto = require('crypto')
 // handle html but also any file formats
 // add in-links info (at least for files)
 // store last-modified and e-tag and use is when re-crawling a site
-// all specifications listed here http://robots-txt.com/
+// specifications listed here http://robots-txt.com/
 // normalize URL to prevent duplicates
 
 const datasetSchema = [
@@ -58,10 +58,11 @@ const normalizeURL = (url) => {
 }
 
 class PagesIterator {
-  constructor (log) {
+  constructor (log, processingConfig) {
     this.pages = []
     this.cursor = -1
     this.log = log
+    this.processingConfig = processingConfig
   }
 
   [Symbol.asyncIterator] () {
@@ -74,6 +75,15 @@ class PagesIterator {
     page.normalizedURL = normalizeURL(page.url)
     if (this.pages.find(p => p.normalizedURL === page.normalizedURL)) return
     page._id = crypto.createHash('sha256').update(page.normalizedURL).digest('base64url').slice(0, 20)
+
+    // improve page title
+    if (page.title) {
+      page.title = page.title.trim()
+      if (this.processingConfig.titlePrefix && page.title.startsWith(this.processingConfig.titlePrefix)) {
+        page.title = page.title.replace(this.processingConfig.titlePrefix, '')
+      }
+    }
+
     this.pages.push(page)
   }
 
@@ -108,7 +118,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     await log.info(`the dataset exists, id="${dataset.id}", title="${dataset.title}"`)
   }
 
-  const pages = new PagesIterator(log)
+  const pages = new PagesIterator(log, processingConfig)
 
   await log.step('Init pages list')
   await log.info(`add ${processingConfig.startURLs.length} pages from config`)
@@ -124,11 +134,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     await log.debug('post page', page)
     // TODO: apply no-index rules
     const form = new FormData()
-    let title = page.title.trim()
-    if (processingConfig.titlePrefix && title.startsWith(processingConfig.titlePrefix)) {
-      title = title.replace(processingConfig.titlePrefix, '')
-    }
-    form.append('title', title)
+    form.append('title', page.title)
     form.append('url', page.url)
     if (page.tags && page.tags.length) form.append('tags', page.tags.join(','))
     data = typeof data === 'string' ? Buffer.from(data) : data
@@ -164,22 +170,45 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
       continue
     }
 
-    // console.log(response.headers, response.data)
+    if (response.headers['x-robots-tag']) {
+      for (const part of response.headers['x-robots-tag'].split(',').map(p => p.trim())) {
+        if (part === 'noindex') page.noindex = true
+        if (part === 'nofollow') page.nofollow = true
+      }
+    }
+
     const isHTML = (response.headers['content-type'] && response.headers['content-type'].startsWith('text/html;')) || (typeof response.data === 'string' && response.data.trim().startsWith('<html'))
     if (isHTML) {
       const cheerio = require('cheerio')
       const $ = cheerio.load(response.data)
       page.title = $('title').text()
-      $('a').each(function (i, elem) {
-        const href = $(this).attr('href')
-        if (href) pages.push({ url: new URL(href, page.url).href, source: page.url })
+
+      $('meta').each(function (i, elem) {
+        const name = $(this).attr('name')
+        if (name === 'robots') {
+          const content = $(this).attr('content')
+          if (content) {
+            for (const part of content.split(',').map(p => p.trim())) {
+              if (part === 'noindex') page.noindex = true
+              if (part === 'nofollow') page.nofollow = true
+            }
+          }
+        }
       })
 
-      if (processingConfig.prune) {
-        processingConfig.prune.forEach(s => $(s).remove())
+      if (!page.nofollow) {
+        $('a').each(function (i, elem) {
+          const href = $(this).attr('href')
+          if (href) pages.push({ url: new URL(href, page.url).href, source: page.url })
+        })
       }
 
-      await sendPage(page, response.data)
+      if (!page.noindex) {
+        if (processingConfig.prune) {
+          processingConfig.prune.forEach(s => $(s).remove())
+        }
+        await sendPage(page, $.html())
+      }
     }
     await pageIntervalPromise
   }
