@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "required": ["robotId"],
+  "properties": {
+    "robotId": {
+      "type": "string",
+      "title": "Identifiant de robot",
+      "description": "Communiqué aux serveurs Web et utilisé pour déterminer les règles de robots.txt nous concernant. Ceci est un élément important de la netiquette. Exemple: \"data-fair-web-scraper-koumoul\"",
+      "default": "data-fair-web-scraper"
+    }
+  }
+}

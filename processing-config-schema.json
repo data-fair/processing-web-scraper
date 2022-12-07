@@ -1,0 +1,96 @@
+{
+  "type": "object",
+  "x-display": "tabs",
+  "required": ["datasetMode"],
+  "allOf": [{
+    "title": "Jeu de données",
+    "oneOf": [{
+      "title": "Créer un jeu de données",
+      "required": ["dataset"],
+      "properties": {
+        "datasetMode": { "type": "string", "const": "create", "title": "Action" },
+        "dataset": {
+          "type": "object",
+          "required": ["title"],
+          "properties": {
+            "id": {"type": "string", "title": "Identifiant (laissez vide pour calculer un identifiant à partir du titre)"},
+            "title": {"type": "string", "title": "Titre", "default": "Hello world "}
+          }
+        }
+      }
+    }, {
+      "title": "Mettre à jour un jeu de données",
+      "required": ["dataset"],
+      "properties": {
+        "datasetMode": { "type": "string", "const": "update" },
+        "dataset": {
+          "type": "object",
+          "x-fromUrl": "{context.dataFairUrl}/api/v1/datasets?q={q}&select=id,title&{context.ownerFilter}",
+          "x-itemsProp": "results",
+          "x-itemTitle": "title",
+          "x-itemKey": "id",
+          "properties": {
+            "id": {"type": "string", "title": "Identifiant"},
+            "title": {"type": "string", "title": "Titre"}
+          }
+        }
+      }
+    }]
+  }, {
+    "title": "Paramètres essentiels",
+    "properties": {
+      "baseURLs": {
+        "type": "array",
+        "title": "URLs préfixes",
+        "description": "Pour qu'une URL soit parcourue elle doit commencer par un de ces préfixe. Si vous souhaitez parcourir tout un nom de domaine vous pouvez simplement saisir son URL racine.", 
+        "minItems": 1,
+        "items": {"type": "string"}
+      },
+      "startURLs": {
+        "type": "array",
+        "title": "URLs de départ",
+        "minItems": 1,
+        "items": {"type": "string"}
+      }
+    }
+  }, {
+    "title": "Paramètres avancés",
+    "properties": {
+      "prune": {
+        "type": "array",
+        "title": "Sélecteurs d'éléments HTML à ignorer",
+        "description": "Par exemple si une barre de navigation est présente sur de nombreuses page du site, répéter son contenu peut nuire à la qualité des résultats. Si cette barre de navigation a pour identifiant 'nav-bar' vous pouvez saisir '#nav-bar'.",
+        "items": {"type": "string"}
+      },
+      "noIndex": {
+        "type": "array",
+        "title": "URLs de page à ne pas indexer",
+        "description": "Elles seront potentiellement quand même analysées à la recherche de liens et de fragments. Notez que ce traitement respecte également les instructions des fichiers robots.txt et les metadonnées HTML robots.",
+        "items": {"type": "string"}
+      },
+      "noFollow": {
+        "type": "array",
+        "title": "URLs de page à ne pas explorer",
+        "description": "Elles seront ni indexées ni analysées à la recherche de liens et de fragments. Notez que ce traitement respecte également les instructions des fichiers robots.txt et les metadonnées HTML robots.",
+        "items": {"type": "string"}
+      },
+      "anchors": {
+        "type": "array",
+        "title": "Extractions de sections ancrées dans les pages",
+        "description": "Une ancre est un lien qui pointe vers une section d'une page. Ces ancres et sections correspondantes peuvent être extraites et indexées séparément de la page qui les contient.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "tag": {"type": "string", "title": "Étiquette à associer à ce type de fragment"},
+            "wrapperSelector": {"type": "string", "title": "Sélecteur CSS de l'élément englobant", "description": "Le sélecteur CSS sera appliqué aux éléments parents de la cible du lien, l'élément le plus proche sera retourné et son contenu HTML sera le contenu du fragment. Optionel, si absent l'élément englobant sera directement l'élément cible du lien."},
+            "titleSelector": {"type": "string", "title": "Sélecteur CSS du titre", "description": "Le sélecteur CSS sera appliqué à l'intérieur de l'élément englobant pour extraire le titre du fragment. Optionel, si absent le titre sera directement extrait de l'élément cible du lien."}
+          }
+        }
+      },
+      "titlePrefix": {
+        "type": "string",
+        "title": "Préfixe à supprimer des titres avant indexation"
+      }
+    }
+  }]
+}
