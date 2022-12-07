@@ -1,11 +1,11 @@
 {
   "type": "object",
-  "required": ["robotId"],
+  "required": ["userAgent"],
   "properties": {
     "userAgent": {
       "type": "string",
-      "title": "Identifiant de robot",
-      "description": "Communicated to the web servers and used to determine the relevant rules from robots.txt files. Example: \"data-fair-web-scraper-koumoul\"",
+      "title": "Robot identifier",
+      "description": "User-Agent header communicated to the web servers and used to determine the relevant rules from robots.txt files. Example: \"data-fair-web-scraper-koumoul\"",
       "default": "data-fair-web-scraper"
     },
     "defaultCrawlDelay": {
