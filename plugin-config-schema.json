@@ -2,7 +2,7 @@
   "type": "object",
   "required": ["robotId"],
   "properties": {
-    "robotId": {
+    "userAgent": {
       "type": "string",
       "title": "Identifiant de robot",
       "description": "Communicated to the web servers and used to determine the relevant rules from robots.txt files. Example: \"data-fair-web-scraper-koumoul\"",

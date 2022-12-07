@@ -40,8 +40,8 @@ describe('Web scraper processing', () => {
 
     context = testUtils.context({
       pluginConfig: {
-        robotId: 'data-fair-web-scraper-test',
-        pageIntervalMS: 100
+        userAgent: 'data-fair-web-scraper-test',
+        crawlDelay: 0.1
       },
       processingConfig: {
         datasetMode: 'create',

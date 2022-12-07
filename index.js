@@ -77,7 +77,7 @@ class PagesIterator {
     if (typeof page === 'string') page = { url: page }
     if (!this.processingConfig.baseURLs.find(b => page.url.startsWith(b))) return
     page.origin = new URL(page.url).origin
-    if (this.robots[page.origin] && !this.robots[page.origin].isAllowed(page.url, this.pluginConfig.robotId || 'data-fair-web-scraper')) {
+    if (this.robots[page.origin] && !this.robots[page.origin].isAllowed(page.url, this.pluginConfig.userAgent || 'data-fair-web-scraper')) {
       return
     }
     page.normalizedURL = normalizeURL(page.url)
@@ -186,7 +186,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     // TODO: apply if-none-match and if-modified-since headers if etag or lastModified are available
     let response
     try {
-      response = await axios.get(page.url)
+      response = await axios.get(page.url, { headers: { 'user-agent': this.pluginConfig.userAgent || 'data-fair-web-scraper' } })
     } catch (err) {
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
       if (page.source) await log.warning(`this broken URL comes from ${page.source}`)
