@@ -84,6 +84,7 @@ class PagesIterator {
     if (typeof page === 'string') page = { url: page }
     if (!this.processingConfig.baseURLs.find(b => page.url.startsWith(b))) return
     page.parsedURL = page.parsedURL || new URL(page.url)
+    if (page.parsedURL.hash) return
     if (this.robots[page.parsedURL.origin] && !this.robots[page.parsedURL.origin].isAllowed(page.url, this.pluginConfig.userAgent || 'data-fair-web-scraper')) {
       return
     }
@@ -139,15 +140,27 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
   const pages = new PagesIterator(log, pluginConfig, processingConfig, robots)
 
   await log.step('Init pages list')
-  await log.info(`add ${processingConfig.startURLs.length} pages from config`)
-  for (const url of processingConfig.startURLs) await pages.push({ url, source: 'config start URLs' })
+  let existingPages
   if (processingConfig.datasetMode === 'update') {
-    const existingPages = (await axios.get(`api/v1/datasets/${dataset.id}/lines`, { params: { select: '_id,url,etag,lastModified', size: 10000 } })).data.results
+    existingPages = (await axios.get(`api/v1/datasets/${dataset.id}/lines`, { params: { select: '_id,url,etag,lastModified', size: 10000 } })).data.results
     await log.info(`add ${existingPages.length} pages from previous crawls`)
-    for (const page of existingPages) await pages.push({ page, source: 'previous exploration' })
+    for (const page of existingPages) {
+      page.parsedURL = new URL(page.url)
+      if (page.parsedURL.hash) {
+        const parentURL = new URL(page.parsedURL)
+        parentURL.hash = ''
+        page.parentId = getId({ url: parentURL.href })
+      }
+      await pages.push({ ...page, source: 'previous exploration' })
+    }
+  }
+  await log.info(`add ${processingConfig.startURLs.length} pages from config`)
+  for (const url of processingConfig.startURLs) {
+    await pages.push({ url, source: 'config start URLs' })
   }
   // TODO: init from sitemap (and use robots.getSitemaps() to help in this)
 
+  const sentIds = new Set([])
   const sendPage = async (page, data, contentType = 'text/html', filename = 'content.html') => {
     await log.debug('send page', page.url)
     // TODO: apply no-index rules
@@ -169,7 +182,10 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
       knownLength: data.length
     }
     form.append('attachment', data, dataOpts)
+    if (page.lastModified) form.append('lastModified', page.lastModified)
+    if (page.etag) form.append('etag', page.etag)
     page._id = getId(page)
+    sentIds.add(page._id)
     const headers = {
       ...form.getHeaders(),
       'content-length': form.getLengthSync()
@@ -189,10 +205,21 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     await new Promise(resolve => setTimeout(resolve, crawlDelay * 1000))
 
     // TODO: apply if-none-match and if-modified-since headers if etag or lastModified are available
+    const headers = { 'user-agent': pluginConfig.userAgent || 'data-fair-web-scraper' }
+    if (page.lastModified) headers['if-modified-since'] = page.lastModified
+    if (page.etag) headers['if-none-match'] = page.etag
     let response
     try {
-      response = await axios.get(page.url, { headers: { 'user-agent': pluginConfig.userAgent || 'data-fair-web-scraper' } })
+      response = await axios.get(page.url, { headers })
     } catch (err) {
+      if (err.status === 304) {
+        await log.debug(`page was not modified since last exploration ${page.url}`)
+        sentIds.add(page._id)
+        for (const existingPage of existingPages) {
+          if (existingPage.parentId === page._id) sentIds.add(existingPage._id)
+        }
+        continue
+      }
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
       if (page.source) await log.warning(`this broken URL comes from ${page.source}`)
       continue
@@ -204,6 +231,9 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
         if (part === 'nofollow') page.nofollow = true
       }
     }
+
+    page.lastModified = response.headers['last-modified']
+    page.etag = response.headers.etag
 
     const isHTML = (response.headers['content-type'] && response.headers['content-type'].startsWith('text/html;')) || (typeof response.data === 'string' && response.data.trim().startsWith('<html'))
     if (isHTML) {
@@ -237,10 +267,9 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
               const fragment = anchor.wrapperSelector ? targetElement.closest(anchor.wrapperSelector) : targetElement
               const fragmentHtml = fragment.html()
               if (fragmentHtml) {
-                const anchorPage = { url: parsedURL.href }
+                const anchorPage = { url: parsedURL.href, tags: anchor.tags || [], source: 'anchor ' + page.url }
                 if (anchor.titleSelector) anchorPage.title = fragment.find(anchor.titleSelector).text() || page.title
                 else anchorPage.title = targetElement.text() || page.title
-                anchorPage.tags = anchor.tags || []
                 anchorsPages.push([anchorPage, fragmentHtml])
                 $(fragment).remove()
               }
@@ -248,7 +277,6 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
           }
         })
         for (const [anchorPage, fragmentHtml] of anchorsPages) {
-          console.log(anchorPage)
           await sendPage(anchorPage, `<body>
   ${fragmentHtml}
 </body>`)
@@ -258,7 +286,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
       if (!page.nofollow) {
         $('a').each(function (i, elem) {
           const href = $(this).attr('href')
-          if (href) pages.push({ url: new URL(href, page.url).href, source: page.url })
+          if (href) pages.push({ url: new URL(href, page.url).href, source: 'link ' + page.url })
         })
       }
 
@@ -267,6 +295,15 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
           processingConfig.prune.forEach(s => $(s).remove())
         }
         await sendPage(page, $.html())
+      }
+    }
+  }
+
+  if (existingPages) {
+    for (const existingPage of existingPages) {
+      if (!sentIds.has(existingPage._id)) {
+        await log.info('delete previously explored page that was not indexed this time', existingPage.url)
+        await axios.delete(`api/v1/datasets/${dataset.id}/lines/${existingPage._id}`)
       }
     }
   }

@@ -63,7 +63,7 @@ describe('Web scraper processing', () => {
     await context.ws.waitForJournal(dataset.id, 'finalize-end')
 
     const pages = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
-      params: { sort: '_updatedAt', select: '_file.content_type,_file.content,title,url' }
+      params: { sort: '_updatedAt', select: '_id,_file.content_type,_file.content,title,url,_updatedAt' }
     })).data.results
 
     const page2 = pages.find(p => p.url === 'http://localhost:3343/site1/page2/')
@@ -89,7 +89,30 @@ describe('Web scraper processing', () => {
     assert.ok(section2Page)
     assert.ok(section2Page['_file.content'].endsWith('Section 2 content'))
     assert.equal(section2Page.title, 'Section 2 title')
-    // another execution should use the previous exploration result
-    // await webScraper.run(context)
+
+    // another execution should use the previous exploration result and detect that nothing needs to be done
+    await webScraper.run(context)
+    const pages2 = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
+      params: { sort: '_updatedAt', select: '_id,_file.content_type,_file.content,title,url,_updatedAt' }
+    })).data.results
+    assert.deepEqual(pages, pages2)
+
+    // another execution that should remove extra page and re-create missing page
+    // and finally obtain the exact same result as previous explorations
+    await context.axios.patch(`api/v1/datasets/${dataset.id}/lines/${sectionsPage._id}`, { lastModified: '', etag: '' })
+    await context.axios.post(`api/v1/datasets/${dataset.id}/lines`, { _id: 'extrapage', url: 'http://test.com' })
+    await context.ws.waitForJournal(dataset.id, 'finalize-end')
+    await webScraper.run(context)
+    await context.ws.waitForJournal(dataset.id, 'finalize-end')
+    const pages3 = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
+      params: { sort: '_updatedAt', select: '_id,_file.content_type,_file.content,title,url,_updatedAt' }
+    })).data.results
+    const sectionsPage2 = pages3.find(p => p.url === 'http://localhost:3343/site1/sections.html')
+    assert.ok(sectionsPage2)
+    assert.ok(sectionsPage2._updatedAt > sectionsPage._updatedAt)
+    assert.deepEqual(
+      pages.sort((p1, p2) => p1.url.localeCompare(p2.url)).map(p => ({ ...p, _updatedAt: null })),
+      pages3.sort((p1, p2) => p1.url.localeCompare(p2.url)).map(p => ({ ...p, _updatedAt: null }))
+    )
   })
 })

@@ -14,7 +14,7 @@
           "required": ["title"],
           "properties": {
             "id": {"type": "string", "title": "Identifiant (laissez vide pour calculer un identifiant à partir du titre)"},
-            "title": {"type": "string", "title": "Titre", "default": "Hello world "}
+            "title": {"type": "string", "title": "Titre", "default": "Web scraper"}
           }
         }
       }
