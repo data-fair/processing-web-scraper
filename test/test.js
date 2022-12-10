@@ -71,6 +71,7 @@ describe('Web scraper processing', () => {
     assert.ok(page2['_file.content'].includes('Page 2 content'))
     assert.equal(page2.title, 'Page 2 title')
     assert.ok(!pages.find(p => p.url === 'http://localhost:3343/site1/page2/index.html'), 'duplicate page')
+    assert.ok(pages.find(p => p.url === 'http://localhost:3343/site1/page3/'))
 
     assert.ok(!pages.find(p => p.url === 'http://localhost:3343/site1/meta-noindex.html'), 'meta noindex page')
     assert.ok(pages.find(p => p.url === 'http://localhost:3343/site1/meta-nofollow.html'), 'meta nofollow page')

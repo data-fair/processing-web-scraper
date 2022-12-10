@@ -210,14 +210,21 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     if (page.etag) headers['if-none-match'] = page.etag
     let response
     try {
-      response = await axios.get(page.url, { headers })
+      response = await axios.get(page.url, { headers, maxRedirects: 0 })
     } catch (err) {
+      // content did not change
       if (err.status === 304) {
         await log.debug(`page was not modified since last exploration ${page.url}`)
         sentIds.add(page._id)
         for (const existingPage of existingPages) {
           if (existingPage.parentId === page._id) sentIds.add(existingPage._id)
         }
+        continue
+      }
+      // follow a redirect
+      if (err.status === 301) {
+        await log.debug(`page redirected ${page.url} -> ${err.headers.location}`)
+        pages.push({ url: new URL(err.headers.location, page.url).href, source: 'redirect ' + page.url })
         continue
       }
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
