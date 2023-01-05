@@ -5,9 +5,7 @@ const robotsParser = require('robots-parser')
 // TODO:
 // handle html but also any file formats
 // add in-links info (at least for files)
-// store last-modified and e-tag and use is when re-crawling a site
 // specifications listed here http://robots-txt.com/
-// normalize URL to prevent duplicates
 
 const datasetSchema = [
   {
@@ -51,13 +49,15 @@ const datasetSchema = [
 // a global variable to manage interruption
 let stopped
 
-const normalizeURL = (url) => {
+const normalizeURL = (url, ignoreHash = false, addSlash = false) => {
   const parsedURL = new URL(url)
   for (const indexSuffix of ['index.html', 'index.php', 'index.jsp', 'index.cgi']) {
     if (parsedURL.pathname.endsWith('/' + indexSuffix)) {
       parsedURL.pathname = parsedURL.pathname.slice(0, parsedURL.pathname.length - indexSuffix.length)
     }
   }
+  if (ignoreHash) parsedURL.hash = ''
+  if (addSlash && !parsedURL.pathname.endsWith('/')) parsedURL.pathname += '/'
   return parsedURL.href
 }
 
@@ -158,7 +158,21 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
   for (const url of processingConfig.startURLs) {
     await pages.push({ url, source: 'config start URLs' })
   }
-  // TODO: init from sitemap (and use robots.getSitemaps() to help in this)
+
+  if (processingConfig.sitemap) {
+    await log.info(`fetch start URLs from sitemmap ${processingConfig.sitemap}`)
+    const sitemap = (await axios.get(processingConfig.sitemap)).data
+    const cheerio = require('cheerio')
+    const $ = cheerio.load(sitemap)
+    const sitemapURLs = []
+    $('url loc').each(function () {
+      sitemapURLs.push($(this).text())
+    })
+    for (const url of sitemapURLs) {
+      await pages.push({ url, source: 'sitemap' })
+    }
+  }
+  // TODO: use robots.getSitemaps()
 
   const sentIds = new Set([])
   const sendPage = async (page, data, contentType = 'text/html', filename = 'content.html') => {
@@ -233,6 +247,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     }
 
     if (response.headers['x-robots-tag']) {
+      await log.debug('use x-robots-tag header', response.headers['x-robots-tag'])
       for (const part of response.headers['x-robots-tag'].split(',').map(p => p.trim())) {
         if (part === 'noindex') page.noindex = true
         if (part === 'nofollow') page.nofollow = true
@@ -252,6 +267,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
         const name = $(this).attr('name')
         if (name === 'robots') {
           const content = $(this).attr('content')
+          log.debug('use robots meta', content)
           if (content) {
             for (const part of content.split(',').map(p => p.trim())) {
               if (part === 'noindex') page.noindex = true
@@ -267,7 +283,7 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
           const href = $(this).attr('href')
           if (!href) return
           const parsedURL = new URL(href, page.url)
-          if (parsedURL.hash) {
+          if (parsedURL.hash && normalizeURL(parsedURL.href, true, true) === normalizeURL(page.url, true, true)) {
             const targetElement = $(parsedURL.hash)
             if (!targetElement) return
             for (const anchor of processingConfig.anchors || []) {
@@ -289,7 +305,6 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
 </body>`)
         }
       }
-
       if (!page.nofollow) {
         $('a').each(function (i, elem) {
           const href = $(this).attr('href')

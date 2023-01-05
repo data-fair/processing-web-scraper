@@ -41,7 +41,7 @@ describe('Web scraper processing', () => {
     context = testUtils.context({
       pluginConfig: {
         userAgent: 'data-fair-web-scraper-test',
-        crawlDelay: 0.1
+        defaultCrawlDelay: 0.1
       },
       processingConfig: {
         datasetMode: 'create',
@@ -115,5 +115,47 @@ describe('Web scraper processing', () => {
       pages.sort((p1, p2) => p1.url.localeCompare(p2.url)).map(p => ({ ...p, _updatedAt: null })),
       pages3.sort((p1, p2) => p1.url.localeCompare(p2.url)).map(p => ({ ...p, _updatedAt: null }))
     )
+  })
+
+  it.skip('should crawl vjsf doc', async function () {
+    this.timeout(120000)
+
+    context = testUtils.context({
+      pluginConfig: {
+        userAgent: 'data-fair-web-scraper-test',
+        defaultCrawlDelay: 0.1
+      },
+      processingConfig: {
+        dataset: { title: 'vjsf doc test' },
+        datasetMode: 'create',
+        startURLs: [
+          'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/'
+        ],
+        baseURLs: [
+          'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/'
+        ],
+        anchors: [
+          { tags: ['example'], wrapperSelector: '.example-wrapper' },
+          { tags: ['config'], wrapperSelector: '.configuration-wrapper' }
+        ],
+        noFollow: [],
+        noIndex: [],
+        prune: ['.v-navigation-drawer', '.v-app-bar'],
+        titlePrefix: 'vjsf - ',
+        sitemap: 'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/sitemap.xml'
+      }
+    }, config, true, false)
+
+    await webScraper.run(context)
+    assert.equal(context.processingConfig.datasetMode, 'update')
+    const dataset = context.processingConfig.dataset
+    assert.equal(dataset.title, 'vjsf doc test')
+    await context.ws.waitForJournal(dataset.id, 'finalize-end')
+
+    const pages = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
+      params: { sort: '_updatedAt', select: '_id,_file.content_type,_file.content,title,url,_updatedAt,tags' }
+    })).data.results
+
+    console.log(pages)
   })
 })

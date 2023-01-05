@@ -49,13 +49,22 @@
       "startURLs": {
         "type": "array",
         "title": "URLs de départ",
-        "minItems": 1,
+        "description": "Peut être omis si vous fournissez une URL vers un fichier sitemap.xml dans les paramètres avancés",
+        "minItems": 0,
         "items": {"type": "string"}
       }
     }
   }, {
     "title": "Paramètres avancés",
     "properties": {
+      "titlePrefix": {
+        "type": "string",
+        "title": "Préfixe à supprimer des titres avant indexation"
+      },
+      "sitemap": {
+        "type": "string",
+        "title": "URL d'un fichier sitemap.xml"
+      },
       "prune": {
         "type": "array",
         "title": "Sélecteurs d'éléments HTML à ignorer",
@@ -98,10 +107,6 @@
             }
           }
         }
-      },
-      "titlePrefix": {
-        "type": "string",
-        "title": "Préfixe à supprimer des titres avant indexation"
       }
     }
   }]
