@@ -1,6 +1,6 @@
 {
   "name": "@data-fair/processing-web-scraper",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A small Web scraper that publishes its data into data-fair datasets.",
   "main": "index.js",
   "scripts": {
