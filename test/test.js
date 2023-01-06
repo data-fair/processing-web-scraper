@@ -117,7 +117,7 @@ describe('Web scraper processing', () => {
     )
   })
 
-  it.skip('should crawl vjsf doc', async function () {
+  it.only('should crawl data-fair doc', async function () {
     this.timeout(120000)
 
     context = testUtils.context({
@@ -126,23 +126,17 @@ describe('Web scraper processing', () => {
         defaultCrawlDelay: 0.1
       },
       processingConfig: {
-        dataset: { title: 'vjsf doc test' },
+        dataset: { title: 'data-fair doc test' },
         datasetMode: 'create',
         startURLs: [
-          'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/'
+          'https://data-fair.github.io/master/'
         ],
         baseURLs: [
-          'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/'
+          'https://data-fair.github.io/master/'
         ],
-        anchors: [
-          { tags: ['example'], wrapperSelector: '.example-wrapper' },
-          { tags: ['config'], wrapperSelector: '.configuration-wrapper' }
-        ],
-        noFollow: [],
-        noIndex: [],
+        excludeURLPatterns: ['https://data-fair.github.io/master/en(/*)'],
         prune: ['.v-navigation-drawer', '.v-app-bar'],
-        titlePrefix: 'vjsf - ',
-        sitemap: 'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/sitemap.xml'
+        titlePrefix: 'Data Fair - '
       }
     }, config, true, false)
 
@@ -156,6 +150,6 @@ describe('Web scraper processing', () => {
       params: { sort: '_updatedAt', select: '_id,_file.content_type,_file.content,title,url,_updatedAt,tags' }
     })).data.results
 
-    console.log(pages)
+    console.log(pages.length)
   })
 })

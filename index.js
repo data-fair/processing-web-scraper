@@ -73,6 +73,13 @@ class PagesIterator {
     this.pluginConfig = pluginConfig
     this.processingConfig = processingConfig
     this.robots = robots
+    const UrlPattern = require('url-pattern')
+    this.excludeURLPatterns = (processingConfig.excludeURLPatterns || []).map(p => {
+      const url = new URL(p)
+      const pattern = new UrlPattern(url.pathname)
+      pattern.hostname = url.hostname
+      return pattern
+    })
   }
 
   [Symbol.asyncIterator] () {
@@ -80,11 +87,13 @@ class PagesIterator {
   }
 
   push (page) {
-    // TODO: apply no-follow rules
     if (typeof page === 'string') page = { url: page }
     if (!this.processingConfig.baseURLs.find(b => page.url.startsWith(b))) return
     page.parsedURL = page.parsedURL || new URL(page.url)
     if (page.parsedURL.hash) return
+    if (this.excludeURLPatterns.find(p => p.match(page.parsedURL.pathname) && p.hostname === page.parsedURL.hostname)) {
+      return
+    }
     if (this.robots[page.parsedURL.origin] && !this.robots[page.parsedURL.origin].isAllowed(page.url, this.pluginConfig.userAgent || 'data-fair-web-scraper')) {
       return
     }
@@ -126,12 +135,16 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
 
   // parse the robots.txt files if available
   const robots = {}
+  const sitemaps = processingConfig.sitemaps || []
   for (const baseURL of processingConfig.baseURLs) {
     const { origin } = new URL(baseURL)
     if (robots[origin]) continue
     try {
       const response = await axios.get(origin + '/robots.txt')
       robots[origin] = robotsParser(origin + '/robots.txt', response.data)
+      for (const sitemap of robots[origin].getSitemaps()) {
+        if (!sitemaps.includes(sitemap)) sitemaps.push(sitemap)
+      }
     } catch (err) {
       await log.info(`failed to fetch ${origin + '/robots.txt'} - ${err.status || err.message}`)
     }
@@ -159,9 +172,9 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     await pages.push({ url, source: 'config start URLs' })
   }
 
-  if (processingConfig.sitemap) {
-    await log.info(`fetch start URLs from sitemmap ${processingConfig.sitemap}`)
-    const sitemap = (await axios.get(processingConfig.sitemap)).data
+  for (const sitemapURL of sitemaps) {
+    await log.info(`fetch start URLs from sitemap ${sitemapURL}`)
+    const sitemap = (await axios.get(sitemapURL)).data
     const cheerio = require('cheerio')
     const $ = cheerio.load(sitemap)
     const sitemapURLs = []
@@ -172,12 +185,10 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
       await pages.push({ url, source: 'sitemap' })
     }
   }
-  // TODO: use robots.getSitemaps()
 
   const sentIds = new Set([])
   const sendPage = async (page, data, contentType = 'text/html', filename = 'content.html') => {
     await log.debug('send page', page.url)
-    // TODO: apply no-index rules
     const form = new FormData()
     // improve page title
     if (page.title) {

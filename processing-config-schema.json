@@ -61,9 +61,11 @@
         "type": "string",
         "title": "Préfixe à supprimer des titres avant indexation"
       },
-      "sitemap": {
-        "type": "string",
-        "title": "URL d'un fichier sitemap.xml"
+      "sitemaps": {
+        "type": "array",
+        "title": "URLs de fichiers sitemap.xml",
+        "description": "Ces URLs peuvent également être découvertes depuis le fichier robots.txt",
+        "items": {"type": "string"}
       },
       "prune": {
         "type": "array",
@@ -71,16 +73,10 @@
         "description": "Par exemple si une barre de navigation est présente sur de nombreuses page du site, répéter son contenu peut nuire à la qualité des résultats. Si cette barre de navigation a pour identifiant 'nav-bar' vous pouvez saisir '#nav-bar'.",
         "items": {"type": "string"}
       },
-      "noIndex": {
+      "excludeURLPatterns": {
         "type": "array",
-        "title": "URLs de page à ne pas indexer",
-        "description": "Elles seront potentiellement quand même analysées à la recherche de liens et de fragments. Notez que ce traitement respecte également les instructions des fichiers robots.txt et les metadonnées HTML robots.",
-        "items": {"type": "string"}
-      },
-      "noFollow": {
-        "type": "array",
-        "title": "URLs de page à ne pas explorer",
-        "description": "Elles seront ni indexées ni analysées à la recherche de liens et de fragments. Notez que ce traitement respecte également les instructions des fichiers robots.txt et les metadonnées HTML robots.",
+        "title": "Formats d'URL à exclure de l'exploration",
+        "description": "Exemple: https://data-fair.github.io/master/en(/*)",
         "items": {"type": "string"}
       },
       "anchors": {
