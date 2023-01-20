@@ -67,6 +67,11 @@
         "description": "Par défaut le sélecteur 'title' est utilisé ce qui correspond au titre de page dans les métadonnées HTML.",
         "items": {"type": "string"}
       },
+      "tagsSelectors": {
+        "type": "array",
+        "title": "Sélecteurs d'éléments HTML à utiliser comme étiquettes",
+        "items": {"type": "string"}
+      },
       "sitemaps": {
         "type": "array",
         "title": "URLs de fichiers sitemap.xml",
@@ -82,7 +87,7 @@
       "excludeURLPatterns": {
         "type": "array",
         "title": "Formats d'URL à exclure de l'exploration",
-        "description": "Exemple: https://data-fair.github.io/master/en(/*)",
+        "description": "Exemple: https://data-fair.github.io/3/en(/*)",
         "items": {"type": "string"}
       },
       "anchors": {

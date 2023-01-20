@@ -137,7 +137,8 @@ describe('Web scraper processing', () => {
         excludeURLPatterns: ['https://data-fair.github.io/3/en(/*)'],
         prune: ['.v-navigation-drawer', '.v-app-bar'],
         titlePrefix: 'Data Fair - ',
-        titleSelectors: ['h2']
+        titleSelectors: ['h2'],
+        tagsSelectors: ['.section-title']
       }
     }, config, true, false)
 

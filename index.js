@@ -280,6 +280,15 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
           break
         }
       }
+      page.tags = []
+      if (processingConfig.tagsSelectors && processingConfig.tagsSelectors.length) {
+        for (const tagsSelector of processingConfig.tagsSelectors) {
+          $(tagsSelector).each(function (i, elem) {
+            const tag = $(this).text().trim()
+            if (tag) page.tags.push(tag)
+          })
+        }
+      }
 
       $('meta').each(function (i, elem) {
         const name = $(this).attr('name')
