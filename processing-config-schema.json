@@ -61,6 +61,12 @@
         "type": "string",
         "title": "Préfixe à supprimer des titres avant indexation"
       },
+      "titleSelectors": {
+        "type": "array",
+        "title": "Sélecteurs d'éléments HTML à utiliser comme titre de page",
+        "description": "Par défaut le sélecteur 'title' est utilisé ce qui correspond au titre de page dans les métadonnées HTML.",
+        "items": {"type": "string"}
+      },
       "sitemaps": {
         "type": "array",
         "title": "URLs de fichiers sitemap.xml",

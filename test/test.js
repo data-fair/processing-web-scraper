@@ -129,21 +129,22 @@ describe('Web scraper processing', () => {
         dataset: { title: 'data-fair doc test' },
         datasetMode: 'create',
         startURLs: [
-          'https://data-fair.github.io/master/'
+          'https://data-fair.github.io/3/'
         ],
         baseURLs: [
-          'https://data-fair.github.io/master/'
+          'https://data-fair.github.io/3/'
         ],
-        excludeURLPatterns: ['https://data-fair.github.io/master/en(/*)'],
+        excludeURLPatterns: ['https://data-fair.github.io/3/en(/*)'],
         prune: ['.v-navigation-drawer', '.v-app-bar'],
-        titlePrefix: 'Data Fair - '
+        titlePrefix: 'Data Fair - ',
+        titleSelectors: ['h2']
       }
     }, config, true, false)
 
     await webScraper.run(context)
     assert.equal(context.processingConfig.datasetMode, 'update')
     const dataset = context.processingConfig.dataset
-    assert.equal(dataset.title, 'vjsf doc test')
+    assert.equal(dataset.title, 'data-fair doc test')
     await context.ws.waitForJournal(dataset.id, 'finalize-end')
 
     const pages = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {

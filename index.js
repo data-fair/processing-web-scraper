@@ -272,7 +272,14 @@ exports.run = async ({ pluginConfig, processingConfig, processingId, dir, tmpDir
     if (isHTML) {
       const cheerio = require('cheerio')
       const $ = cheerio.load(response.data)
-      page.title = $('title').text()
+      const titleSelectors = (processingConfig.titleSelectors || []).concat(['title', 'h1'])
+      for (const titleSelector of titleSelectors) {
+        page.title = $(titleSelector).text()
+        if (page.title) {
+          log.debug(`used title selector "${titleSelector}" -> ${page.title.trim()}`)
+          break
+        }
+      }
 
       $('meta').each(function (i, elem) {
         const name = $(this).attr('name')
