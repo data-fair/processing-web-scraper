@@ -2,7 +2,7 @@ process.env.NODE_ENV = 'test'
 const config = require('config')
 const express = require('express')
 const assert = require('assert').strict
-const webScraper = require('../')
+const webScraper = require('../index.ts')
 const testUtils = require('@data-fair/processings-test-utils')
 
 describe('Web scraper processing', () => {
@@ -117,7 +117,7 @@ describe('Web scraper processing', () => {
     )
   })
 
-  it.only('should crawl data-fair doc', async function () {
+  it('should crawl data-fair doc', async function () {
     this.timeout(120000)
 
     context = testUtils.context({
