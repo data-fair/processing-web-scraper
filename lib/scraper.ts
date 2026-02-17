@@ -142,9 +142,11 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       schema: datasetSchema,
       extras: { processingId }
     })).data
+    if (dataset.status !== 'finalized') {
+      await ws.waitForJournal(dataset.id, 'finalize-end')
+    }
     await log.info(`dataset created, id="${dataset.id}", title="${dataset.title}"`)
     await patchConfig({ datasetMode: 'update', dataset: { id: dataset.id, title: dataset.title } })
-    await ws.waitForJournal(dataset.id, 'finalize-end')
   } else if (processingConfig.datasetMode === 'update') {
     await log.step('Check dataset')
     dataset = (await axios.get(`api/v1/datasets/${processingConfig.dataset?.id}`)).data
@@ -174,15 +176,17 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   let existingPages: Page[] | undefined
   if (processingConfig.datasetMode === 'update') {
     existingPages = (await axios.get(`api/v1/datasets/${dataset.id}/lines`, { params: { select: '_id,url,etag,lastModified', size: 10000 } })).data.results
-    await log.info(`add ${existingPages.length} pages from previous crawls`)
-    for (const page of existingPages) {
-      page.parsedURL = new URL(page.url)
-      if (page.parsedURL.hash) {
-        const parentURL = new URL(page.parsedURL)
-        parentURL.hash = ''
-        page.parentId = await getId({ url: parentURL.href })
+    if (existingPages) {
+      await log.info(`add ${existingPages.length} pages from previous crawls`)
+      for (const page of existingPages) {
+        page.parsedURL = new URL(page.url)
+        if (page.parsedURL.hash) {
+          const parentURL = new URL(page.parsedURL)
+          parentURL.hash = ''
+          page.parentId = await getId({ url: parentURL.href })
+        }
+        await pages.push({ ...page, source: 'previous exploration' })
       }
-      await pages.push({ ...page, source: 'previous exploration' })
     }
   }
   await log.info(`add ${processingConfig.startURLs?.length || 0} pages from config`)
@@ -207,15 +211,13 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   const sendPage = async (page: Page, data: any, contentType = 'text/html', filename = 'content.html') => {
     await log.debug('send page', page.url)
     const form = new FormData()
+
     if (page.title) {
       page.title = page.title.trim()
       if (processingConfig.titlePrefix && page.title.startsWith(processingConfig.titlePrefix)) {
         page.title = page.title.replace(processingConfig.titlePrefix, '')
       }
     }
-    form.append('title', page.title)
-    form.append('url', page.url)
-    if (page.tags && page.tags.length) form.append('tags', page.tags.join(','))
     data = typeof data === 'string' ? Buffer.from(data) : data
     const dataOpts = {
       contentType,
@@ -223,10 +225,14 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       knownLength: data.length
     }
     form.append('attachment', data, dataOpts)
-    if (page.lastModified) form.append('lastModified', page.lastModified)
-    if (page.etag) form.append('etag', page.etag)
     page._id = await getId(page)
     sentIds.add(page._id)
+    const body = { ...page }
+    delete body.source
+    delete body.parsedURL
+    delete body.nofollow
+    delete body.noindex
+    form.append('_body', JSON.stringify(body))
     const headers = {
       ...form.getHeaders(),
       'content-length': form.getLengthSync()
@@ -277,7 +283,6 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
         if (part === 'nofollow') page.nofollow = true
       }
     }
-
     page.lastModified = response.headers['last-modified']
     page.etag = response.headers.etag
 

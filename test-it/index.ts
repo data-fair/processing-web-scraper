@@ -3,16 +3,18 @@ import { strict as assert } from 'node:assert'
 import { it, describe, before, after, afterEach } from 'node:test'
 import config from 'config'
 import testUtils from '@data-fair/lib-processing-dev/tests-utils.js'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import * as webScraperPlugin from '../index.ts'
 
 describe('Web scraper processing', () => {
   let server: any
-  before('start example sites server', async () => {
+  before(async () => {
     const app = express()
     app.use(express.static('test-it/resources'))
     server = app.listen(3343)
+    await eventPromise(server, 'listening')
   })
-  after('shutdown example sites server', () => {
+  after(() => {
     server.close()
   })
 
@@ -51,6 +53,7 @@ describe('Web scraper processing', () => {
           titleSelector: 'a'
         }]
       }
+    // @ts-ignore ProcessingTestConfig should be optional in lib-processing-dev
     }, config)
 
     await webScraperPlugin.run(context)
@@ -97,9 +100,9 @@ describe('Web scraper processing', () => {
 
     // another execution that should remove extra page and re-create missing page
     // and finally obtain the exact same result as previous explorations
-    await context.axios.patch(`api/v1/datasets/${dataset.id}/lines/${sectionsPage._id}`, { lastModified: '', etag: '' })
+    await context.axios.patch(`api/v1/datasets/${dataset.id}/lines/${sectionsPage._id}`, { lastModified: ' ', etag: ' ' })
     await context.axios.post(`api/v1/datasets/${dataset.id}/lines`, { _id: 'extrapage', url: 'http://test.com' })
-    await context.ws.waitForJournal(dataset.id, 'finalize-end')
+    // await context.ws.waitForJournal(dataset.id, 'finalize-end')
     await webScraperPlugin.run(context)
     await context.ws.waitForJournal(dataset.id, 'finalize-end')
     const pages3 = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {
@@ -114,33 +117,33 @@ describe('Web scraper processing', () => {
     )
   })
 
-  it('should crawl data-fair doc', { timeout: 120000 }, async () => {
+  it('should crawl vjsf doc', { timeout: 120000 }, async () => {
     context = testUtils.context({
       pluginConfig: {
         userAgent: 'data-fair-web-scraper-test',
         defaultCrawlDelay: 0.1
       },
       processingConfig: {
-        dataset: { title: 'data-fair doc test' },
+        dataset: { title: 'vjsf doc test' },
         datasetMode: 'create',
         startURLs: [
-          'https://data-fair.github.io/3/'
+          'https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/'
         ],
         baseURLs: [
-          'https://data-fair.github.io/3/'
+          'https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/'
         ],
-        excludeURLPatterns: ['https://data-fair.github.io/3/en(/*)'],
         prune: ['.v-navigation-drawer', '.v-app-bar'],
-        titlePrefix: 'Data Fair - ',
-        titleSelectors: ['h2'],
-        tagsSelectors: ['.section-title']
+        titlePrefix: 'VJSF - ',
+        titleSelectors: ['h1'],
+        // tagsSelectors: ['.section-title']
       }
+    // @ts-ignore ProcessingTestConfig should be optional in lib-processing-dev
     }, config)
 
     await webScraperPlugin.run(context)
     assert.equal(context.processingConfig.datasetMode, 'update')
     const dataset = context.processingConfig.dataset
-    assert.equal(dataset.title, 'data-fair doc test')
+    assert.equal(dataset.title, 'vjsf doc test')
     await context.ws.waitForJournal(dataset.id, 'finalize-end')
 
     const pages = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {

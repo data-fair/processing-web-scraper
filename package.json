@@ -1,14 +1,16 @@
 {
   "name": "@data-fair/processing-web-scraper",
-  "version": "0.5.0",
+  "version": "0.6.0-beta1",
   "description": "A small Web scraper that publishes its data into data-fair datasets.",
   "main": "index.ts",
   "type": "module",
   "scripts": {
     "lint": "eslint .",
     "lint-fix": "eslint --fix .",
-    "prepare": "husky",
-    "test": "node --experimental-strip-types --test --test-reporter=spec test-it/index.ts"
+    "build-types": "export NODE_OPTIONS='--experimental-strip-types' && df-build-types ./",
+    "prepare": "husky || true",
+    "test-base": "NODE_ENV=test node --experimental-strip-types --test-force-exit --test-concurrency=1 --test --test-reporter=spec --test-reporter-destination=stdout",
+    "test": "npm run test-base test-it/*.ts"
   },
   "repository": {
     "type": "git",
@@ -27,7 +29,9 @@
     "@commitlint/cli": "^20.4.1",
     "@commitlint/config-conventional": "^20.4.1",
     "@data-fair/lib-processing-dev": "^0.2.0",
+    "@data-fair/lib-types-builder": "^1.11.3",
     "@types/config": "^3.3.5",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.2.0",
     "config": "^4.2.0",
     "eslint": "^9.39.2",

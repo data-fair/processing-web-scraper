@@ -1,20 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "bundler",
-    "lib": ["ES2022"],
-    "outDir": "./dist",
-    "rootDir": ".",
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "strict": true,
-    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "resolveJsonModule": true
   },
-  "include": ["index.ts", "lib/**/*", "types/**/*"],
-  "exclude": ["node_modules", "dist", "test"]
+  "exclude": ["node_modules",".type","test-it"]
 }
