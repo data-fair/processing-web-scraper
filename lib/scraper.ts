@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import UrlPattern from 'url-pattern'
 import robotsParser from 'robots-parser'
-import cheerio from 'cheerio'
+import * as cheerio from 'cheerio'
 import FormData from 'form-data'
 import type { ProcessingContext } from '@data-fair/lib-common-types/processings.js'
 import type { ProcessingConfig } from '../types/processingConfig/index.ts'
@@ -84,6 +84,8 @@ interface Page {
   parentId?: string
 }
 
+type UrlPatternWithHostname = UrlPattern & { hostname: string }
+
 class PagesIterator {
   pages: Page[] = []
   cursor = -1
@@ -100,7 +102,7 @@ class PagesIterator {
     this.robots = robots
     this.excludeURLPatterns = (processingConfig.excludeURLPatterns || []).map((p: string) => {
       const url = new URL(p)
-      const pattern = new UrlPattern(url.pathname)
+      const pattern = new UrlPattern(url.pathname) as UrlPatternWithHostname
       pattern.hostname = url.hostname
       return pattern
     })
@@ -167,7 +169,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
     if (robots[origin]) continue
     try {
       const response = await axios.get(origin + '/robots.txt')
-      robots[origin] = robotsParser(origin + '/robots.txt', response.data)
+      robots[origin] = (robotsParser as any)(origin + '/robots.txt', response.data)
       for (const sitemap of robots[origin].getSitemaps()) {
         if (!sitemaps.includes(sitemap)) {
           await log.info(`add sitemap found in robots.txt ${sitemap}`)

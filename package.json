@@ -10,7 +10,9 @@
     "build-types": "export NODE_OPTIONS='--experimental-strip-types' && df-build-types ./",
     "prepare": "husky || true",
     "test-base": "NODE_ENV=test node --experimental-strip-types --test-force-exit --test-concurrency=1 --test --test-reporter=spec --test-reporter-destination=stdout --test-timeout=300000",
-    "test": "npm run test-base test-it/*.ts"
+    "test": "npm run test-base test-it/*.ts",
+    "check-types": "tsc",
+    "quality": "npm run lint && npm run check-types && npm test"
   },
   "repository": {
     "type": "git",
@@ -42,9 +44,9 @@
   },
   "dependencies": {
     "@data-fair/lib-utils": "^1.9.0",
-    "cheerio": "^1.0.0-rc.12",
-    "form-data": "^4.0.0",
-    "robots-parser": "^3.0.0",
+    "cheerio": "^1.2.0",
+    "form-data": "^4.0.5",
+    "robots-parser": "^3.0.1",
     "url-pattern": "^1.0.3"
   },
   "files": [
