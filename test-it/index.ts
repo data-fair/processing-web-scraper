@@ -100,9 +100,9 @@ describe('Web scraper processing', () => {
 
     // another execution that should remove extra page and re-create missing page
     // and finally obtain the exact same result as previous explorations
-    await context.axios.patch(`api/v1/datasets/${dataset.id}/lines/${sectionsPage._id}`, { lastModified: ' ', etag: ' ' })
+    await context.axios.patch(`api/v1/datasets/${dataset.id}/lines/${sectionsPage._id}`, { lastModified: 'test', etag: 'test' })
     await context.axios.post(`api/v1/datasets/${dataset.id}/lines`, { _id: 'extrapage', url: 'http://test.com' })
-    // await context.ws.waitForJournal(dataset.id, 'finalize-end')
+    await context.ws.waitForJournal(dataset.id, 'finalize-end')
     await webScraperPlugin.run(context)
     await context.ws.waitForJournal(dataset.id, 'finalize-end')
     const pages3 = (await context.axios.get(`api/v1/datasets/${dataset.id}/lines`, {

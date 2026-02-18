@@ -218,7 +218,6 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
 
   const sentIds = new Set<string>()
   const sendPage = async (page: Page, data: any, contentType = 'text/html', filename = 'content.html') => {
-    await log.debug('send page', page.url)
     const form = new FormData()
 
     if (page.title) {
@@ -246,11 +245,13 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       ...form.getHeaders(),
       'content-length': form.getLengthSync()
     }
+
     await axios({
       method: 'put',
       url: `api/v1/datasets/${dataset.id}/lines/${page._id}`,
       data: form,
-      headers
+      headers,
+      validateStatus: (status) => status === 200 || status === 304
     })
   }
 
