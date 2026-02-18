@@ -1,6 +1,6 @@
 {
   "name": "@data-fair/processing-web-scraper",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A small Web scraper that publishes its data into data-fair datasets.",
   "main": "index.ts",
   "type": "module",
