@@ -17,7 +17,7 @@ const datasetSchema = [
     key: 'description',
     type: 'string',
     'x-refersTo': 'https://schema.org/description',
-    'x-capabilities': { text: false, textStandard: false, textAgg: false, insensitive: false }
+    'x-capabilities': { values: false, textAgg: false, insensitive: false }
   },
   {
     key: 'url',
@@ -35,7 +35,6 @@ const datasetSchema = [
   {
     key: 'etag',
     type: 'string',
-    separator: ',',
     'x-capabilities': { index: false, values: false, text: false, textStandard: false, textAgg: false, insensitive: false }
   },
   {
@@ -170,7 +169,10 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       const response = await axios.get(origin + '/robots.txt')
       robots[origin] = robotsParser(origin + '/robots.txt', response.data)
       for (const sitemap of robots[origin].getSitemaps()) {
-        if (!sitemaps.includes(sitemap)) sitemaps.push(sitemap)
+        if (!sitemaps.includes(sitemap)) {
+          await log.info(`add sitemap found in robots.txt ${sitemap}`)
+          sitemaps.push(sitemap)
+        }
       }
     } catch (err: any) {
       await log.info(`failed to fetch ${origin + '/robots.txt'} - ${err.status || err.message}`)
@@ -275,7 +277,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       }
       if (err.status === 301) {
         await log.debug(`page redirected ${page.url} -> ${err.headers.location}`)
-        await pages.push({ url: new URL(err.headers.location, page.url).href, source: 'redirect ' + page.url })
+        await pages.push({ url: err.headers.location, source: 'redirect ' + page.url })
         continue
       }
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
@@ -324,7 +326,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
         if (name === 'robots') {
           log.debug('robots meta', content)
           if (content) {
-            for (const part of content.split(',').map((p: string) => p.trim())) {
+            for (const part of content.split(',').map((p) => p.trim())) {
               if (part === 'noindex') page.noindex = true
               if (part === 'nofollow') page.nofollow = true
             }
@@ -332,7 +334,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
         }
         if (processingConfig.extractKeywords && name === 'keywords' && content) {
           page.tags = page.tags ?? []
-          for (const tag of content.split(',').map((t: string) => t.trim()).filter((t: string) => t)) {
+          for (const tag of content.split(',').map((t) => t.trim()).filter((t) => t)) {
             page.tags!.push(tag)
           }
         }

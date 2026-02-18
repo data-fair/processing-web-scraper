@@ -117,7 +117,7 @@ describe('Web scraper processing', () => {
     )
   })
 
-  it.only('should crawl vjsf doc', { timeout: 300000 }, async () => {
+  it.skip('should crawl vjsf doc', { timeout: 300000 }, async () => {
     context = testUtils.context({
       pluginConfig: {
         userAgent: 'data-fair-web-scraper-test',
@@ -136,7 +136,8 @@ describe('Web scraper processing', () => {
         prune: ['.v-navigation-drawer', '.v-app-bar'],
         titlePrefix: 'VJSF - ',
         titleSelectors: ['h1'],
-        extractKeywords: true
+        extractKeywords: true,
+        extractDescription: true
         // tagsSelectors: ['.section-title']
       }
     // @ts-ignore ProcessingTestConfig should be optional in lib-processing-dev
