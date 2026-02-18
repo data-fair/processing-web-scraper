@@ -9,7 +9,7 @@
     "lint-fix": "eslint --fix .",
     "build-types": "export NODE_OPTIONS='--experimental-strip-types' && df-build-types ./",
     "prepare": "husky || true",
-    "test-base": "NODE_ENV=test node --experimental-strip-types --test-force-exit --test-concurrency=1 --test --test-reporter=spec --test-reporter-destination=stdout",
+    "test-base": "NODE_ENV=test node --experimental-strip-types --test-force-exit --test-concurrency=1 --test --test-reporter=spec --test-reporter-destination=stdout --test-timeout=300000",
     "test": "npm run test-base test-it/*.ts"
   },
   "repository": {

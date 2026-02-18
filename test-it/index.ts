@@ -36,7 +36,7 @@ describe('Web scraper processing', () => {
     assert.equal(schema.default.type, 'object')
   })
 
-  it('should crawl a site', { timeout: 60000 }, async () => {
+  it('should crawl a site', { timeout: 120000 }, async () => {
     context = testUtils.context({
       pluginConfig: {
         userAgent: 'data-fair-web-scraper-test',
@@ -117,7 +117,7 @@ describe('Web scraper processing', () => {
     )
   })
 
-  it.only('should crawl vjsf doc', { timeout: 120000 }, async () => {
+  it.only('should crawl vjsf doc', { timeout: 300000 }, async () => {
     context = testUtils.context({
       pluginConfig: {
         userAgent: 'data-fair-web-scraper-test',
@@ -126,6 +126,7 @@ describe('Web scraper processing', () => {
       processingConfig: {
         dataset: { title: 'vjsf doc test' },
         datasetMode: 'create',
+        sitemaps: ['https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/sitemap.xml'],
         startURLs: [
           'https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/'
         ],
@@ -135,6 +136,7 @@ describe('Web scraper processing', () => {
         prune: ['.v-navigation-drawer', '.v-app-bar'],
         titlePrefix: 'VJSF - ',
         titleSelectors: ['h1'],
+        extractKeywords: true
         // tagsSelectors: ['.section-title']
       }
     // @ts-ignore ProcessingTestConfig should be optional in lib-processing-dev
