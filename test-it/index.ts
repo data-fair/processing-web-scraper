@@ -21,7 +21,7 @@ describe('Web scraper processing', () => {
   let context: any
   afterEach(async () => {
     if (context) {
-      // await context.cleanup()
+      await context.cleanup()
       context = null
     }
   })
