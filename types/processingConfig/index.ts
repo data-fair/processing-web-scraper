@@ -19,6 +19,7 @@ export interface ProcessingConfig {
   tagsSelectors?: string[]
   extractKeywords?: boolean
   extractArticleTags?: boolean
+  extractDescription?: boolean
   sitemaps?: string[]
   prune?: string[]
   excludeURLPatterns?: string[]

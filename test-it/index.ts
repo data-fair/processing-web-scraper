@@ -21,7 +21,7 @@ describe('Web scraper processing', () => {
   let context: any
   afterEach(async () => {
     if (context) {
-      await context.cleanup()
+      // await context.cleanup()
       context = null
     }
   })
@@ -126,12 +126,12 @@ describe('Web scraper processing', () => {
       processingConfig: {
         dataset: { title: 'vjsf doc test' },
         datasetMode: 'create',
-        sitemaps: ['https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/sitemap.xml'],
+        sitemaps: ['https://koumoul-dev.github.io/vuetify-jsonschema-form/master/sitemap.xml'],
         startURLs: [
-          'https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/'
+          'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/'
         ],
         baseURLs: [
-          'https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/'
+          'https://koumoul-dev.github.io/vuetify-jsonschema-form/master/'
         ],
         prune: ['.v-navigation-drawer', '.v-app-bar'],
         titlePrefix: 'VJSF - ',

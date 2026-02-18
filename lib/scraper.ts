@@ -14,6 +14,12 @@ const datasetSchema = [
     'x-capabilities': { textAgg: false }
   },
   {
+    key: 'description',
+    type: 'string',
+    'x-refersTo': 'https://schema.org/description',
+    'x-capabilities': { text: false, textStandard: false, textAgg: false, insensitive: false }
+  },
+  {
     key: 'url',
     type: 'string',
     'x-refersTo': 'https://schema.org/WebPage',
@@ -66,6 +72,7 @@ const getId = async (page: { url: string }): Promise<string> => {
 interface Page {
   url: string
   title?: string
+  description?: string
   tags?: string[]
   etag?: string
   lastModified?: string
@@ -332,6 +339,9 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
         if (processingConfig.extractArticleTags && property === 'article:tag' && content) {
           page.tags = page.tags ?? []
           page.tags!.push(content.trim())
+        }
+        if (processingConfig.extractDescription && name === 'description' && content) {
+          page.description = content.trim()
         }
       })
 
