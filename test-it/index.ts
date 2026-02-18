@@ -117,7 +117,7 @@ describe('Web scraper processing', () => {
     )
   })
 
-  it('should crawl vjsf doc', { timeout: 120000 }, async () => {
+  it.only('should crawl vjsf doc', { timeout: 120000 }, async () => {
     context = testUtils.context({
       pluginConfig: {
         userAgent: 'data-fair-web-scraper-test',

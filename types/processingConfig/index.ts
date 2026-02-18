@@ -17,6 +17,8 @@ export interface ProcessingConfig {
   titlePrefix?: string
   titleSelectors?: string[]
   tagsSelectors?: string[]
+  extractKeywords?: boolean
+  extractArticleTags?: boolean
   sitemaps?: string[]
   prune?: string[]
   excludeURLPatterns?: string[]

@@ -297,20 +297,24 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
           break
         }
       }
-      page.tags = []
+
       if (processingConfig.tagsSelectors && processingConfig.tagsSelectors.length) {
         for (const tagsSelector of processingConfig.tagsSelectors) {
           $(tagsSelector).each(function (this: any) {
             const tag = $(this).text().trim()
-            if (tag) page.tags!.push(tag)
+            if (tag) {
+              page.tags = page.tags ?? []
+              page.tags!.push(tag)
+            }
           })
         }
       }
 
       $('meta').each(function (this: any) {
         const name = $(this).attr('name')
+        const property = $(this).attr('property')
+        const content = $(this).attr('content')
         if (name === 'robots') {
-          const content = $(this).attr('content')
           log.debug('robots meta', content)
           if (content) {
             for (const part of content.split(',').map((p: string) => p.trim())) {
@@ -318,6 +322,16 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
               if (part === 'nofollow') page.nofollow = true
             }
           }
+        }
+        if (processingConfig.extractKeywords && name === 'keywords' && content) {
+          page.tags = page.tags ?? []
+          for (const tag of content.split(',').map((t: string) => t.trim()).filter((t: string) => t)) {
+            page.tags!.push(tag)
+          }
+        }
+        if (processingConfig.extractArticleTags && property === 'article:tag' && content) {
+          page.tags = page.tags ?? []
+          page.tags!.push(content.trim())
         }
       })
 
