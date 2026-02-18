@@ -72,6 +72,21 @@
         "title": "Sélecteurs d'éléments HTML à utiliser comme étiquettes",
         "items": {"type": "string"}
       },
+      "extractKeywords": {
+        "type": "boolean",
+        "title": "Extraire les mots-clés depuis la balise meta name=\"keywords\"",
+        "default": false
+      },
+      "extractArticleTags": {
+        "type": "boolean",
+        "title": "Extraire les étiquettes depuis les balises meta property=\"article:tag\"",
+        "default": false
+      },
+      "extractDescription": {
+        "type": "boolean",
+        "title": "Extraire la description depuis la balise meta name=\"description\"",
+        "default": false
+      },
       "sitemaps": {
         "type": "array",
         "title": "URLs de fichiers sitemap.xml",
