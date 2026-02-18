@@ -279,8 +279,12 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
         continue
       }
       if (err.status === 301 || err.status === 302) {
-        await log.debug(`page redirected ${page.url} -> ${err.headers.location}`)
-        await pages.push({ url: new URL(err.headers.location, page.url).href, source: 'redirect ' + page.url })
+        if (!err.headers?.location) {
+          log.error('redirection without a location header', err)
+        } else {
+          await log.debug(`page redirected ${page.url} -> ${err.headers.location}`)
+          await pages.push({ url: new URL(err.headers.location, page.url).href, source: 'redirect ' + page.url })
+        }
         continue
       }
       await log.warning(`failed to fetch page ${page.url} - ${err.status || err.message}`)
