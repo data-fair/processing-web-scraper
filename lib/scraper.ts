@@ -282,10 +282,10 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
         // lack of homogeneity between processings service and dev env
         const location = err.headers?.location ?? err.response?.headers?.location
         if (!location) {
-          log.error('redirection without a location header')
+          await log.error('redirection without a location header')
         } else {
-          await log.debug(`page redirected ${page.url} -> ${err.headers.location}`)
-          await pages.push({ url: new URL(err.headers.location, page.url).href, source: 'redirect ' + page.url })
+          await log.debug(`page redirected ${page.url} -> ${location}`)
+          await pages.push({ url: new URL(location, page.url).href, source: 'redirect ' + page.url })
         }
         continue
       }
